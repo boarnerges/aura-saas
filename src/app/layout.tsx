@@ -27,7 +27,12 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <main className="grow">{children}</main>
+        <footer className="text-center text-gray-500 p-6 border-t">
+          Built with Aura
+        </footer>
+      </body>
     </html>
   );
 }
