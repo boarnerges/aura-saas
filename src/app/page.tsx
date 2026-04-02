@@ -1,32 +1,30 @@
+"use client";
+
 import { Link } from "@/types";
 import LinkCard from "@/components/LinkCard";
-import { link } from "fs/promises";
+import { useState, useEffect } from "react";
 
 export default function Home() {
+  const [links, setLinks] = useState<Link[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-const mocklinks: Link[] = [
-  {
-    id: "abc-1",
-    title: "My Github",
-    url: "https://github.com/boarnerges",
-    isActive: true,
-  },
-  {
-    id: "abc-2",
-    title: "My LinkedIn",
-    url: "https://www.linkedin.com/in/boris-nerges-9a1b4a1b3/",
-    isActive: false,
-  },
-  {
-    id: "abc-3",
-    title: "My Twitter",
-    url: "https://twitter.com/boarnerges",
-    isActive: false,
-  },
-];
-return (
-  <div className="max-w-xl mx-auto p-8">
-    {mocklinks.map((link) => (<LinkCard key={link.id} link={link} />)) }
+  useEffect(() => {
+    const saved = localStorage.getItem("aura-links");
+    if (saved) {
+      setLinks(JSON.parse(saved));
+    }
+    setIsLoaded(true);
+  }, []);
 
-  </div>)
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div className="max-w-xl mx-auto p-8">
+      {links.map((link) => (
+        <LinkCard key={link.id} link={link} />
+      ))}
+    </div>
+  );
 }
