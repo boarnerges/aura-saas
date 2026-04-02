@@ -6,19 +6,22 @@ import { useState, useEffect } from "react";
 export default function DashboardPage() {
   const MY_USERNAME = "boarnerges"; // Replace with dynamic username logic if needed
 
-  const [links, setLinks] = useState<Link[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(`aura-links-${MY_USERNAME}`);
-      return saved ? JSON.parse(saved) : [];
-    }
-    return [];
-  });
+  const [links, setLinks] = useState<Link[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (links.length > 0) {
+    const saved = localStorage.getItem(`aura-links-${MY_USERNAME}`);
+    if (saved) {
+      setLinks(JSON.parse(saved));
+    }
+    setIsLoaded(true);
+  }, [MY_USERNAME]);
+
+  useEffect(() => {
+    if (isLoaded) {
       localStorage.setItem(`aura-links-${MY_USERNAME}`, JSON.stringify(links));
     }
-  }, [links]);
+  }, [links, isLoaded, MY_USERNAME]);
 
   //1. logic to ADD a new link
   const addLink = () => {
@@ -33,7 +36,7 @@ export default function DashboardPage() {
   };
 
   // 2. Logic to UPDATE a link
-  const updateLink = (id: string, key: keyof Link, value: string) => {
+  const updateLink = (id: string, key: keyof Link, value: string | boolean) => {
     setLinks((prevLinks) =>
       prevLinks.map((link) =>
         link.id === id ? { ...link, [key]: value } : link,
@@ -74,7 +77,16 @@ export default function DashboardPage() {
               onChange={(e) => updateLink(link.id, "url", e.target.value)}
             />
             <div className="flex justify-between items-center border-t pt-4">
-              <span className="text-xs text-gray-400 font-mono">{link.id}</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={link.isActive}
+                  onChange={(e) =>
+                    updateLink(link.id, "isActive", e.target.checked)
+                  }
+                />
+                <label className="text-sm text-gray-600">Active</label>
+              </div>
               <button
                 onClick={() => deleteLink(link.id)}
                 className="text-red-500 border hover:bg-red-50 px-3 py-1 rounded-md transition-colors"

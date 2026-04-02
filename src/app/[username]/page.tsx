@@ -12,11 +12,31 @@ export default function UserProfile() {
   const [links, setLinks] = useState<Link[]>([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem(`aura-links-${MY_USERNAME}`);
-    if (saved) {
-      setLinks(JSON.parse(saved));
-    }
-  }, [MY_USERNAME]);
+    const loadLinks = () => {
+      const saved = localStorage.getItem(`aura-links-${username}`);
+      if (saved) {
+        setLinks(JSON.parse(saved));
+      } else {
+        setLinks([]);
+      }
+    };
+
+    // 2. Initial load on mount
+    loadLinks();
+
+    // 3. The "Cross-Tab" Sync Logic
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only update if the key that changed matches THIS user
+      if (e.key === `aura-links-${username}`) {
+        loadLinks();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    // 4. Cleanup (Crucial for performance!)
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [username]);
   return (
     <div className="flex flex-col items-center pt-20 min-h-screen bg-gray-50">
       <div className="mb-8 text-center">
@@ -28,7 +48,9 @@ export default function UserProfile() {
 
       <div className="w-full max-w-md px-4 space-y-4">
         {links.length > 0 ? (
-          links.map((link) => <LinkCard key={link.id} link={link} />)
+          links
+            .filter((link) => link.isActive)
+            .map((link) => <LinkCard key={link.id} link={link} />)
         ) : (
           <p className="text-center text-gray-400 mt-10">
             This user hasn't added any links yet.
