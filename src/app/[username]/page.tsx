@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function UserProfile() {
-  const MY_USERNAME = "boarnerges";
+  
   const params = useParams();
   const username = params.username;
 
@@ -53,7 +53,7 @@ export default function UserProfile() {
             .map((link) => <LinkCard key={link.id} link={link} />)
         ) : (
           <p className="text-center text-gray-400 mt-10">
-            This user hasn't added any links yet.
+            This user hasn&apos;t added any links yet.
           </p>
         )}
       </div>

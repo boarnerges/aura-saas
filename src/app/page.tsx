@@ -1,30 +1,44 @@
 "use client";
 
-import { Link } from "@/types";
-import LinkCard from "@/components/LinkCard";
-import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
 
 export default function Home() {
-  const [links, setLinks] = useState<Link[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("aura-links");
-    if (saved) {
-      setLinks(JSON.parse(saved));
-    }
-    setIsLoaded(true);
-  }, []);
-
-  if (!isLoaded) {
-    return <div>Loading...</div>;
-  }
+  const { isSignedIn, user } = useUser();
 
   return (
-    <div className="max-w-xl mx-auto p-8">
-      {links.map((link) => (
-        <LinkCard key={link.id} link={link} />
-      ))}
-    </div>
+    <main className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+      <h1 className="text-7xl font-black tracking-tighter italic mb-4">AURA</h1>
+      <p className="text-xl text-gray-600 mb-10 max-w-lg">
+        The simplest way to share your digital world.
+      </p>
+
+      <div className="flex gap-4">
+        {isSignedIn ? (
+          <Link
+            href="/dashboard"
+            className="bg-black text-white px-10 py-4 rounded-full font-bold hover:scale-105 transition-all"
+          >
+            Go to Dashboard
+          </Link>
+        ) : (
+          <Link
+            href="/sign-up"
+            className="bg-black text-white px-10 py-4 rounded-full font-bold hover:scale-105 transition-all"
+          >
+            Create Your Account
+          </Link>
+        )}
+      </div>
+
+      {isSignedIn && (
+        <p className="mt-4 text-sm text-gray-400">
+          Logged in as{" "}
+          <span className="font-bold underline">
+            {user.username || user.firstName}
+          </span>
+        </p>
+      )}
+    </main>
   );
 }
