@@ -24,3 +24,32 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer base {
+  /* Default Light (Neo-Brutalist) */
+  html[data-theme="light"] {
+    --aura-bg: #ffffff;
+    --aura-text: #000000;
+    --aura-accent: #3b82f6; /* Blue shadow */
+    --aura-card: #ffffff;
+    --aura-border: #000000;
+  }
+
+  /* Dark Mode (High Contrast) */
+  html[data-theme="dark"] {
+    --aura-bg: #0a0a0a;
+    --aura-text: #ffffff;
+    --aura-accent: #ffffff;
+    --aura-card: #1a1a1a;
+    --aura-border: #333333;
+  }
+
+  /* Midnight (The "Boarnerges" Special) */
+  html[data-theme="midnight"] {
+    --aura-bg: #0f172a; /* Slate 900 */
+    --aura-text: #f8fafc;
+    --aura-accent: #38bdf8; /* Sky 400 */
+    --aura-card: #1e293b;
+    --aura-border: #38bdf8;
+  }
+}

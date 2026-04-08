@@ -1,8 +1,8 @@
 export interface Link {
-  url: string;
-  title: string;
   id: string;
-  isActive?: boolean;
-  icon?: string;
-  clicks?: number;
+  created_at: string;
+  title: string;
+  url: string;
+  user_id: string;
+  icon_name?: string;
 }
