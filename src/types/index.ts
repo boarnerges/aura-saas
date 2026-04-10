@@ -6,3 +6,12 @@ export interface Link {
   user_id: string;
   icon_name?: string;
 }
+
+export interface Profile {
+  clerk_id: string;
+  display_name: string;
+  bio: string;
+  theme: string;
+  avatar_url: string | null;
+  username: string;
+}
