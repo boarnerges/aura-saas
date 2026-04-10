@@ -19,29 +19,24 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setThemeState] = useState<Theme>("light"); // Default to light
+  const [theme, setThemeState] = useState<Theme>(() => {
+    const storedTheme = localStorage.getItem("theme") as Theme;
+    if (storedTheme) {
+      return storedTheme;
+    }
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return prefersDark ? "dark" : "light";
+  });
 
   // Function to apply theme to HTML element
   const applyThemeToHtml = useCallback((selectedTheme: Theme) => {
     document.documentElement.setAttribute("data-theme", selectedTheme);
   }, []);
 
-  // Initialize theme from localStorage or system preference
+  // Apply theme to HTML element when theme state changes
   useEffect(() => {
-    const storedTheme = localStorage.getItem("theme") as Theme;
-    if (storedTheme) {
-      setThemeState(storedTheme);
-      applyThemeToHtml(storedTheme);
-    } else {
-      // Optional: Detect system preference
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)",
-      ).matches;
-      const initialTheme = prefersDark ? "dark" : "light";
-      setThemeState(initialTheme);
-      applyThemeToHtml(initialTheme);
-    }
-  }, [applyThemeToHtml]);
+    applyThemeToHtml(theme);
+  }, [theme, applyThemeToHtml]);
 
   // Update theme state and optionally persist
   const setTheme = useCallback(

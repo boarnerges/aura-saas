@@ -13,9 +13,9 @@ import {
   FaFacebook,
   FaTiktok,
 } from "react-icons/fa";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme, Theme } from "@/contexts/ThemeContext";
 import { Sun, Moon, Palette, Loader2, Plus, Trash2, Globe } from "lucide-react";
-import { Link as LinkType } from "@/types";
+import { Link, Profile } from "@/types";
 import debounce from "lodash/debounce";
 import ProfileSetting from "@/components/ProfileSetting";
 
@@ -44,27 +44,18 @@ const DynamicIcon = ({
   }
   const LucideIconComponent = LucideIcons[iconName as keyof typeof LucideIcons];
   if (!LucideIconComponent) {
-    return <LucideIcons.Globe size={size} className={className} />;
+    return <Globe size={size} className={className} />;
   }
   return <LucideIconComponent size={size} className={className} />;
 };
 
-interface UserProfile {
-  clerk_id: string;
-  username: string;
-  display_name: string | null;
-  initialBio: string;
-  theme: string;
-  avatar_url: string | null;
-}
-
 export default function DashboardPage() {
   const { user, isLoaded: isAuthLoaded } = useUser();
   const { theme, setTheme } = useTheme();
-  const [links, setLinks] = useState<LinkType[]>([]);
+  const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -97,33 +88,35 @@ export default function DashboardPage() {
       try {
         const { data: profileData, error: profileCheckError } = await supabase
           .from("profiles")
-          .select("clerk_id, username, display_name, theme, avatar_url")
+          .select("clerk_id, username, display_name, theme, avatar_url, bio")
           .eq("clerk_id", user.id)
           .maybeSingle();
 
         if (profileCheckError) throw new Error(profileCheckError.message);
 
-        let currentProfile = profileData;
+        let currentProfile: Profile | null = profileData;
 
         if (!profileData) {
           const usernameToUse = (
             user.username || `user_${user.id.slice(-6)}`
           ).toLowerCase();
-          const newProfileData = {
+          const newProfileData: Profile = {
             clerk_id: user.id,
             username: usernameToUse,
             display_name: user.firstName || "New User",
             theme: "light",
             avatar_url: null,
+            bio: "",
           };
           await supabase.from("profiles").insert([newProfileData]);
           currentProfile = newProfileData;
         }
 
         setProfile(currentProfile);
+
         const sessionPref = localStorage.getItem("theme");
         if (!sessionPref && currentProfile) {
-          setTheme(currentProfile.theme as any, true);
+          setTheme(currentProfile.theme as Theme, true);
         }
 
         const { data: linksData } = await supabase
@@ -143,7 +136,7 @@ export default function DashboardPage() {
   }, [isAuthLoaded, user, setTheme]);
 
   const debouncedUpdate = useCallback(
-    debounce(async (id: string, updates: Partial<LinkType>) => {
+    debounce(async (id: string, updates: Partial<Link>) => {
       setSaving(true);
       await supabase.from("links").update(updates).eq("id", id);
       setSaving(false);
@@ -151,7 +144,7 @@ export default function DashboardPage() {
     [],
   );
 
-  const handleUpdate = (id: string, updates: Partial<LinkType>) => {
+  const handleUpdate = (id: string, updates: Partial<Link>) => {
     setLinks((prev) =>
       prev.map((l) => (l.id === id ? { ...l, ...updates } : l)),
     );
@@ -164,7 +157,7 @@ export default function DashboardPage() {
       .from("links")
       .insert([{ user_id: user.id, title: "New Link", url: "https://" }])
       .select();
-    if (data) setLinks([...links, data[0]]);
+    if (data) setLinks([...links, data[0] as Link]);
   };
 
   const deleteLink = async (id: string) => {
@@ -176,7 +169,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-white">
         <Loader2 className="animate-spin text-black" size={40} />
-        <p className="text-xs font-black uppercase tracking-[0.3em] text-gray-400">
+        <p className="text-xs font-black uppercase tracking-[0.3em] text-gray-300">
           Syncing Aura
         </p>
       </div>
@@ -185,7 +178,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[var(--aura-bg)] pb-32">
-      {/* HEADER - Sticky & Glassmorphism ready */}
       <nav className="bg-[var(--aura-card)] border-b-2 border-[var(--aura-border)] p-4 sticky top-0 z-30">
         <div className="max-w-2xl mx-auto flex justify-between items-center">
           <h1 className="font-black italic text-lg md:text-xl text-[var(--aura-text)] tracking-tighter">
@@ -211,7 +203,6 @@ export default function DashboardPage() {
       </nav>
 
       <main className="max-w-2xl mx-auto p-4 md:p-6">
-        {/* WELCOME BOX - Fluid Typography & Mobile Layout */}
         <div className="bg-[var(--aura-card)] text-[var(--aura-text)] p-6 md:p-8 border-4 border-[var(--aura-border)] mb-8 shadow-[4px_4px_0px_0px_rgba(59,130,246,1)] md:shadow-[8px_8px_0px_0px_rgba(59,130,246,1)] transition-all">
           <div className="flex flex-col md:flex-row justify-between items-start gap-6">
             <div className="space-y-1">
@@ -242,15 +233,14 @@ export default function DashboardPage() {
               userId={user.id}
               initialUsername={profile.username}
               initialDisplayName={profile.display_name || ""}
-              initialBio={profile.initialBio || ""}
+              initialBio={profile.bio || ""}
               initialAvatarUrl={profile.avatar_url}
-              onUpdate={(upd) => setProfile(upd as UserProfile)}
+              onUpdate={(upd) => setProfile(upd as Profile)}
             />
             <div className="h-0.5 bg-[var(--aura-border)] w-full my-8 opacity-20" />
           </div>
         )}
 
-        {/* SECTION TITLE */}
         <div className="flex items-center gap-3 mb-6">
           <div className="h-3 w-3 bg-blue-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(37,99,235,0.5)]" />
           <h3 className="font-black uppercase text-[10px] md:text-xs tracking-[0.3em] text-[var(--aura-text)]">
@@ -258,7 +248,6 @@ export default function DashboardPage() {
           </h3>
         </div>
 
-        {/* LINK LIST - Card Refinements */}
         <div className="space-y-4">
           {links.length === 0 ? (
             <div className="text-center py-16 border-4 border-dashed border-[var(--aura-border)] rounded-3xl opacity-40">
@@ -327,7 +316,6 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* FLOATING ACTION BUTTON - Thumb-Zone Optimized */}
         <div className="fixed bottom-8 left-0 right-0 px-6 flex justify-center pointer-events-none z-40">
           <button
             onClick={addLink}

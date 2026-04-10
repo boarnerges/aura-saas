@@ -3,9 +3,9 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme, Theme } from "@/contexts/ThemeContext"; // Import Theme
 import { Sun, Moon, Palette, Loader2, ExternalLink, Globe, Share2 } from "lucide-react";
-import { Link as LinkType } from "@/types";
+import { Link, Profile } from "@/types"; // Import Profile and Link
 import * as LucideIcons from "lucide-react";
 import {
   FaTwitter,
@@ -40,8 +40,8 @@ export default function UserProfile() {
   const username = params.username as string;
   const { theme, setTheme } = useTheme();
 
-  const [links, setLinks] = useState<LinkType[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [links, setLinks] = useState<Link[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function UserProfile() {
       setLoading(true);
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("clerk_id, display_name, bio, theme, avatar_url")
+        .select("clerk_id, display_name, bio, theme, avatar_url, username") // Added username to select
         .eq("username", username.toLowerCase())
         .maybeSingle();
 
@@ -63,7 +63,7 @@ export default function UserProfile() {
       // Sync theme but allow user to override it locally
       const localPref = localStorage.getItem("theme");
       if (!localPref) {
-        setTheme(profileData.theme as any, false);
+        setTheme(profileData.theme as Theme, false); // Use Theme type
       }
 
       const { data: linksData } = await supabase
@@ -86,10 +86,11 @@ export default function UserProfile() {
         text: `Check out my link stack on Aura!`,
         url: window.location.href,
       });
-    } catch (err) {
+    } catch (err) { // Changed _err to err
       // Fallback: Copy to clipboard if Share API isn't supported
       navigator.clipboard.writeText(window.location.href);
       alert("Link copied to clipboard!");
+      console.error("Share failed:", err); // Use err
     }
   };
 

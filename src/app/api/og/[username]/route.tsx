@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { supabase } from ' @/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export const runtime = 'edge';
 
@@ -51,6 +51,7 @@ export async function GET(
           >
             <img
               src={profile.avatar_url || 'https://via.placeholder.com/240'}
+              alt="Avatar"
               style={{ objectFit: 'cover', width: '240px', height: '240px' }}
             />
           </div>
