@@ -8,7 +8,7 @@ import React, {
   useCallback,
 } from "react";
 
-type Theme = "light" | "dark" | "midnight";
+export type Theme = "light" | "dark" | "midnight";
 
 interface ThemeContextType {
   theme: Theme;
@@ -19,47 +19,53 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    const storedTheme = localStorage.getItem("theme") as Theme;
-    if (storedTheme) {
-      return storedTheme;
-    }
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    return prefersDark ? "dark" : "light";
-  });
+  // 1. Initialize with a default to avoid the "localStorage is not defined" server error
+  const [theme, setThemeState] = useState<Theme>("light");
 
   // Function to apply theme to HTML element
   const applyThemeToHtml = useCallback((selectedTheme: Theme) => {
-    document.documentElement.setAttribute("data-theme", selectedTheme);
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", selectedTheme);
+    }
   }, []);
 
-  // Apply theme to HTML element when theme state changes
+  // 2. This effect runs ONLY on the client after the first render
   useEffect(() => {
-    applyThemeToHtml(theme);
-  }, [theme, applyThemeToHtml]);
+    const storedTheme = localStorage.getItem("theme") as Theme;
+    if (storedTheme) {
+      setThemeState(storedTheme);
+      applyThemeToHtml(storedTheme);
+    } else {
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+      const initialTheme = prefersDark ? "dark" : "light";
+      setThemeState(initialTheme);
+      applyThemeToHtml(initialTheme);
+    }
+  }, [applyThemeToHtml]);
 
   // Update theme state and optionally persist
   const setTheme = useCallback(
     (newTheme: Theme, persist: boolean = true) => {
       setThemeState(newTheme);
       applyThemeToHtml(newTheme);
-      if (persist) {
-        localStorage.setItem("theme", newTheme);
-      } else {
-        localStorage.removeItem("theme"); // Remove if not persisting (e.g., using profile theme)
+      if (typeof window !== "undefined") {
+        if (persist) {
+          localStorage.setItem("theme", newTheme);
+        } else {
+          localStorage.removeItem("theme");
+        }
       }
     },
     [applyThemeToHtml],
   );
 
-  // Simple toggle between light/dark/midnight
   const toggleTheme = useCallback(() => {
-    setTheme((prevTheme) => {
-      if (prevTheme === "light") return "dark";
-      if (prevTheme === "dark") return "midnight";
-      return "light";
-    });
-  }, [setTheme]);
+    const themes: Theme[] = ["light", "dark", "midnight"];
+    const nextIndex = (themes.indexOf(theme) + 1) % themes.length;
+    setTheme(themes[nextIndex]);
+  }, [theme, setTheme]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>

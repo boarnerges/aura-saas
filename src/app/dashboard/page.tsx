@@ -18,6 +18,9 @@ import { Sun, Moon, Palette, Loader2, Plus, Trash2, Globe } from "lucide-react";
 import { Link, Profile } from "@/types";
 import debounce from "lodash/debounce";
 import ProfileSetting from "@/components/ProfileSetting";
+import { motion, AnimatePresence } from "framer-motion";
+import { getSupabaseClient } from "@/lib/supabase";
+import { useAuth } from "@clerk/nextjs";
 
 const brandIcons: { [key: string]: React.ElementType } = {
   Twitter: FaTwitter,
@@ -50,6 +53,7 @@ const DynamicIcon = ({
 };
 
 export default function DashboardPage() {
+  const { getToken } = useAuth();
   const { user, isLoaded: isAuthLoaded } = useUser();
   const { theme, setTheme } = useTheme();
   const [links, setLinks] = useState<Link[]>([]);
@@ -153,11 +157,39 @@ export default function DashboardPage() {
 
   const addLink = async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from("links")
-      .insert([{ user_id: user.id, title: "New Link", url: "https://" }])
-      .select();
-    if (data) setLinks([...links, data[0] as Link]);
+
+    try {
+      // 1. Get the Supabase JWT from Clerk
+      const token = await getToken({ template: "supabase" });
+      if (!token) throw new Error("Authentication failed");
+
+      // 2. Use your authenticated client helper
+      const authenticatedSupabase = getSupabaseClient(token);
+
+      // 3. Perform the insert with the signed client
+      const { data, error } = await authenticatedSupabase
+        .from("links")
+        .insert([
+          {
+            user_id: user.id, // This is your Clerk ID (TEXT)
+            title: "New Link",
+            url: "https://",
+          },
+        ])
+        .select();
+
+      if (error) {
+        console.error("Supabase Error:", error);
+        return;
+      }
+
+      // 4. Update the local state with the new link from the DB
+      if (data && data.length > 0) {
+        setLinks([...links, data[0] as Link]);
+      }
+    } catch (err) {
+      console.error("Failed to add link:", err);
+    }
   };
 
   const deleteLink = async (id: string) => {
@@ -167,9 +199,9 @@ export default function DashboardPage() {
 
   if (!isAuthLoaded || loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-white">
-        <Loader2 className="animate-spin text-black" size={40} />
-        <p className="text-xs font-black uppercase tracking-[0.3em] text-gray-300">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-white text-black">
+        <Loader2 className="animate-spin" size={40} />
+        <p className="text-xs font-black uppercase tracking-[0.3em] opacity-40">
           Syncing Aura
         </p>
       </div>
@@ -178,6 +210,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[var(--aura-bg)] pb-32">
+      {/* HEADER */}
       <nav className="bg-[var(--aura-card)] border-b-2 border-[var(--aura-border)] p-4 sticky top-0 z-30">
         <div className="max-w-2xl mx-auto flex justify-between items-center">
           <h1 className="font-black italic text-lg md:text-xl text-[var(--aura-text)] tracking-tighter">
@@ -203,7 +236,12 @@ export default function DashboardPage() {
       </nav>
 
       <main className="max-w-2xl mx-auto p-4 md:p-6">
-        <div className="bg-[var(--aura-card)] text-[var(--aura-text)] p-6 md:p-8 border-4 border-[var(--aura-border)] mb-8 shadow-[4px_4px_0px_0px_rgba(59,130,246,1)] md:shadow-[8px_8px_0px_0px_rgba(59,130,246,1)] transition-all">
+        {/* WELCOME BOX */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[var(--aura-card)] text-[var(--aura-text)] p-6 md:p-8 border-4 border-[var(--aura-border)] mb-8 shadow-[8px_8px_0px_0px_rgba(59,130,246,1)]"
+        >
           <div className="flex flex-col md:flex-row justify-between items-start gap-6">
             <div className="space-y-1">
               <h2 className="text-2xl md:text-4xl font-black italic uppercase leading-none tracking-tight">
@@ -225,21 +263,29 @@ export default function DashboardPage() {
               {isSettingsOpen ? "Close ×" : "Edit Profile ✎"}
             </button>
           </div>
-        </div>
+        </motion.div>
 
-        {isSettingsOpen && user && profile && (
-          <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-300">
-            <ProfileSetting
-              userId={user.id}
-              initialUsername={profile.username}
-              initialDisplayName={profile.display_name || ""}
-              initialBio={profile.bio || ""}
-              initialAvatarUrl={profile.avatar_url}
-              onUpdate={(upd) => setProfile(upd as Profile)}
-            />
-            <div className="h-0.5 bg-[var(--aura-border)] w-full my-8 opacity-20" />
-          </div>
-        )}
+        {/* SETTINGS DRAWER */}
+        <AnimatePresence>
+          {isSettingsOpen && user && profile && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mb-10"
+            >
+              <ProfileSetting
+                userId={user.id}
+                initialUsername={profile.username}
+                initialDisplayName={profile.display_name || ""}
+                initialBio={profile.bio || ""}
+                initialAvatarUrl={profile.avatar_url}
+                onUpdate={(upd) => setProfile(upd as Profile)}
+              />
+              <div className="h-0.5 bg-[var(--aura-border)] w-full my-8 opacity-20" />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="flex items-center gap-3 mb-6">
           <div className="h-3 w-3 bg-blue-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(37,99,235,0.5)]" />
@@ -248,81 +294,104 @@ export default function DashboardPage() {
           </h3>
         </div>
 
+        {/* LINK LIST */}
         <div className="space-y-4">
-          {links.length === 0 ? (
-            <div className="text-center py-16 border-4 border-dashed border-[var(--aura-border)] rounded-3xl opacity-40">
-              <p className="font-bold uppercase tracking-widest text-sm">
-                Empty Stack
-              </p>
-            </div>
-          ) : (
-            links.map((link) => (
-              <div
-                key={link.id}
-                className="bg-[var(--aura-card)] border-2 border-[var(--aura-border)] p-4 md:p-6 rounded-2xl shadow-[4px_4px_0px_0px_var(--aura-border)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
+          <AnimatePresence mode="popLayout">
+            {links.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16 border-4 border-dashed border-[var(--aura-border)] rounded-3xl opacity-40"
               >
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-3">
-                    <select
-                      value={link.icon_name || "Globe"}
-                      onChange={(e) =>
-                        handleUpdate(link.id, { icon_name: e.target.value })
-                      }
-                      className="bg-[var(--aura-bg)] border-2 border-[var(--aura-border)] p-2 text-[10px] font-black rounded-lg uppercase outline-none focus:ring-2 ring-blue-500 transition-all text-[var(--aura-text)]"
+                <p className="font-bold uppercase tracking-widest text-sm">
+                  Empty Stack
+                </p>
+              </motion.div>
+            ) : (
+              links.map((link) => (
+                <motion.div
+                  key={link.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{
+                    opacity: 0,
+                    scale: 0.95,
+                    transition: { duration: 0.2 },
+                  }}
+                  whileHover={{ y: -2 }}
+                  className="bg-[var(--aura-card)] border-2 border-[var(--aura-border)] p-4 md:p-6 rounded-2xl shadow-[4px_4px_0px_0px_var(--aura-border)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                >
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={link.icon_name || "Globe"}
+                        onChange={(e) =>
+                          handleUpdate(link.id, { icon_name: e.target.value })
+                        }
+                        className="bg-(--aura-bg) border-2 border-(--aura-border) p-2 text-[10px] font-black rounded-lg uppercase text-(--aura-text) outline-none focus:ring-2 ring-blue-500"
+                      >
+                        <option value="Globe">General</option>
+                        <option value="Twitter">Twitter/X</option>
+                        <option value="Github">GitHub</option>
+                        <option value="Youtube">YouTube</option>
+                        <option value="Linkedin">LinkedIn</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="Twitch">Twitch</option>
+                        <option value="ExternalLink">Portfolio</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={link.title}
+                        onChange={(e) =>
+                          handleUpdate(link.id, { title: e.target.value })
+                        }
+                        className="w-full font-black text-base md:text-xl outline-none bg-transparent text-[var(--aura-text)] focus:text-blue-500 transition-colors"
+                        placeholder="Title"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 px-1">
+                      <DynamicIcon
+                        iconName={link.icon_name || "Globe"}
+                        size={16}
+                        className="text-blue-500"
+                      />
+                      <input
+                        type="text"
+                        value={link.url}
+                        onChange={(e) =>
+                          handleUpdate(link.id, { url: e.target.value })
+                        }
+                        className="w-full text-xs md:text-sm font-medium opacity-70 outline-none bg-transparent text-[var(--aura-text)] focus:opacity-100"
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t-2 border-[var(--aura-border)] border-dashed flex justify-end">
+                    <button
+                      onClick={() => deleteLink(link.id)}
+                      className="flex items-center gap-2 text-[10px] font-black text-red-500 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-all"
                     >
-                      <option value="Globe">General</option>
-                      <option value="Twitter">Twitter/X</option>
-                      <option value="Github">GitHub</option>
-                      <option value="Youtube">YouTube</option>
-                      <option value="Linkedin">LinkedIn</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={link.title}
-                      onChange={(e) =>
-                        handleUpdate(link.id, { title: e.target.value })
-                      }
-                      className="w-full font-black text-base md:text-xl outline-none bg-transparent focus:text-blue-500 transition-colors text-[var(--aura-text)]"
-                      placeholder="Title"
-                    />
+                      <Trash2 size={12} /> REMOVE
+                    </button>
                   </div>
-                  <div className="flex items-center gap-3 px-1">
-                    <DynamicIcon
-                      iconName={link.icon_name || "Globe"}
-                      size={16}
-                      className="text-blue-500"
-                    />
-                    <input
-                      type="text"
-                      value={link.url}
-                      onChange={(e) =>
-                        handleUpdate(link.id, { url: e.target.value })
-                      }
-                      className="w-full text-xs md:text-sm font-medium opacity-70 outline-none bg-transparent focus:opacity-100 text-[var(--aura-text)]"
-                      placeholder="https://..."
-                    />
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t-2 border-[var(--aura-border)] border-dashed flex justify-end">
-                  <button
-                    onClick={() => deleteLink(link.id)}
-                    className="flex items-center gap-2 text-[10px] font-black text-red-500 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-all"
-                  >
-                    <Trash2 size={12} /> REMOVE
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
         </div>
 
+        {/* FLOATING ACTION BUTTON */}
         <div className="fixed bottom-8 left-0 right-0 px-6 flex justify-center pointer-events-none z-40">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={addLink}
-            className="pointer-events-auto w-full max-w-md bg-[var(--aura-text)] text-[var(--aura-bg)] py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-3 shadow-[0_10px_20px_rgba(0,0,0,0.2),8px_8px_0px_0px_var(--aura-accent)] hover:scale-[1.02] active:scale-95 transition-all"
+            className="pointer-events-auto w-full max-w-md bg-[var(--aura-text)] text-[var(--aura-bg)] py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-3 shadow-[0_10px_20px_rgba(0,0,0,0.2),8px_8px_0px_0px_var(--aura-accent)]"
           >
             <Plus size={22} strokeWidth={3} /> Add New Link
-          </button>
+          </motion.button>
         </div>
       </main>
     </div>

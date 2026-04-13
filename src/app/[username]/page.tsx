@@ -3,9 +3,17 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useTheme, Theme } from "@/contexts/ThemeContext"; // Import Theme
-import { Sun, Moon, Palette, Loader2, ExternalLink, Globe, Share2 } from "lucide-react";
-import { Link, Profile } from "@/types"; // Import Profile and Link
+import { useTheme, Theme } from "@/contexts/ThemeContext";
+import {
+  Sun,
+  Moon,
+  Palette,
+  Loader2,
+  ExternalLink,
+  Globe,
+  Share2,
+} from "lucide-react";
+import { Link, Profile } from "@/types";
 import * as LucideIcons from "lucide-react";
 import {
   FaTwitter,
@@ -14,7 +22,6 @@ import {
   FaLinkedin,
   FaInstagram,
   FaFacebook,
-  FaTiktok,
 } from "react-icons/fa";
 
 const brandIcons: { [key: string]: React.ElementType } = {
@@ -24,14 +31,18 @@ const brandIcons: { [key: string]: React.ElementType } = {
   Linkedin: FaLinkedin,
   Instagram: FaInstagram,
   Facebook: FaFacebook,
-  Tiktok: FaTiktok,
+  Globe: Globe,
+  ExternalLink: ExternalLink,
 };
 
 const DynamicIcon = ({ name, size = 20 }: { name: string; size?: number }) => {
   const BrandIconComponent = brandIcons[name];
   if (BrandIconComponent) return <BrandIconComponent size={size} />;
+
   const LucideIconComponent = LucideIcons[name as keyof typeof LucideIcons];
   if (!LucideIconComponent) return <Globe size={size} />;
+
+  // @ts-ignore
   return <LucideIconComponent size={size} />;
 };
 
@@ -43,27 +54,32 @@ export default function UserProfile() {
   const [links, setLinks] = useState<Link[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false); // New state for 404 check
 
   useEffect(() => {
     async function loadPublicProfile() {
       setLoading(true);
+      setNotFound(false);
+
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("clerk_id, display_name, bio, theme, avatar_url, username") // Added username to select
+        .select("clerk_id, display_name, bio, theme, avatar_url, username")
         .eq("username", username.toLowerCase())
         .maybeSingle();
 
+      // If no profile is found in Supabase
       if (profileError || !profileData) {
+        setNotFound(true);
         setLoading(false);
         return;
       }
 
       setProfile(profileData);
 
-      // Sync theme but allow user to override it locally
+      // Sync theme settings
       const localPref = localStorage.getItem("theme");
       if (!localPref) {
-        setTheme(profileData.theme as Theme, false); // Use Theme type
+        setTheme(profileData.theme as Theme, false);
       }
 
       const { data: linksData } = await supabase
@@ -86,11 +102,9 @@ export default function UserProfile() {
         text: `Check out my link stack on Aura!`,
         url: window.location.href,
       });
-    } catch (err) { // Changed _err to err
-      // Fallback: Copy to clipboard if Share API isn't supported
+    } catch (err) {
       navigator.clipboard.writeText(window.location.href);
       alert("Link copied to clipboard!");
-      console.error("Share failed:", err); // Use err
     }
   };
 
@@ -105,10 +119,34 @@ export default function UserProfile() {
     );
   }
 
+  // 🔥 THE "SUPER TIGHT" GUARD: Show this if James doesn't exist in the DB
+  if (notFound) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--aura-bg)] text-[var(--aura-text)] p-6 text-center">
+        <div className="w-24 h-24 mb-6 border-4 border-dashed border-[var(--aura-border)] rounded-full flex items-center justify-center opacity-20">
+          <Globe size={40} />
+        </div>
+        <h1 className="text-4xl font-black italic uppercase tracking-tighter mb-2">
+          Aura Not Found
+        </h1>
+        <p className="text-sm font-bold opacity-60 max-w-xs mb-8">
+          The handle <span className="text-blue-500">@{username}</span> hasn't
+          been claimed yet or doesn't exist.
+        </p>
+        <a
+          href="/"
+          className="px-8 py-4 bg-[var(--aura-card)] border-2 border-[var(--aura-border)] shadow-[6px_6px_0px_0px_var(--aura-border)] font-black uppercase italic text-xs hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+        >
+          Create Your Aura
+        </a>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center min-h-screen bg-[var(--aura-bg)] text-[var(--aura-text)] selection:bg-blue-500 selection:text-white">
-      {/* Premium Theme Toggle */}
-      <div className="w-full max-w-2xl flex justify-end p-6">
+      {/* Action Bar */}
+      <div className="w-full max-w-2xl flex justify-end p-6 gap-2">
         <button
           onClick={() =>
             setTheme(
@@ -120,7 +158,7 @@ export default function UserProfile() {
               true,
             )
           }
-          className="p-3 rounded-2xl bg-[var(--aura-card)] border-2 border-[var(--aura-border)] shadow-[4px_4px_0px_0px_var(--aura-border)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all mr-2"
+          className="p-3 rounded-2xl bg-[var(--aura-card)] border-2 border-[var(--aura-border)] shadow-[4px_4px_0px_0px_var(--aura-border)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
         >
           {theme === "light" && <Sun size={20} />}
           {theme === "dark" && <Moon size={20} />}
@@ -128,17 +166,17 @@ export default function UserProfile() {
         </button>
         <button
           onClick={handleShare}
-          className="p-3 rounded-2xl bg-[var(--aura-card)] border-2 border-[var(--aura-border)] shadow-[4px_4px_0px_0px_var(--aura-border)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all mr-2"
+          className="p-3 rounded-2xl bg-[var(--aura-card)] border-2 border-[var(--aura-border)] shadow-[4px_4px_0px_0px_var(--aura-border)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
         >
           <Share2 size={20} />
         </button>
       </div>
 
       <main className="w-full max-w-[480px] px-6 pb-20">
-        {/* Profile Header - Mobile Optimized */}
+        {/* Header */}
         <div className="flex flex-col items-center text-center mb-12">
           <div className="relative mb-6">
-            <div className="w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-[6px] border-[var(--aura-card)] shadow-[0_20px_50px_rgba(0,0,0,0.1)] ring-2 ring-[var(--aura-border)]">
+            <div className="w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-[6px] border-[var(--aura-card)] shadow-[0_20px_50px_rgba(0,0,0,0.1)] ring-2 ring-[var(--aura-border)] bg-[var(--aura-card)]">
               {profile?.avatar_url ? (
                 <img
                   src={profile.avatar_url}
@@ -168,7 +206,7 @@ export default function UserProfile() {
           )}
         </div>
 
-        {/* The Public Link Stack */}
+        {/* Links */}
         <div className="space-y-4">
           {links.length > 0 ? (
             links.map((link) => (
@@ -207,7 +245,6 @@ export default function UserProfile() {
         </div>
       </main>
 
-      {/* Footer Branding */}
       <footer className="mt-auto py-12 flex flex-col items-center gap-2">
         <div className="h-px w-12 bg-[var(--aura-border)] mb-4" />
         <p className="text-[10px] font-black tracking-[0.5em] opacity-20 uppercase">
