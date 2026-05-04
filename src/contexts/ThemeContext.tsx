@@ -2,10 +2,10 @@
 
 import React, {
   createContext,
-  useState,
   useEffect,
   useContext,
   useCallback,
+  useSyncExternalStore,
 } from "react";
 
 export type Theme = "light" | "dark" | "midnight";
@@ -18,37 +18,56 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const themes: Theme[] = ["light", "dark", "midnight"];
+const themeChangeEvent = "aura-theme-change";
+
+function isTheme(value: string | null): value is Theme {
+  return themes.includes(value as Theme);
+}
+
+function getPreferredTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+
+  const activeTheme = document.documentElement.getAttribute("data-theme");
+  if (isTheme(activeTheme)) return activeTheme;
+
+  const storedTheme = localStorage.getItem("theme");
+  if (isTheme(storedTheme)) return storedTheme;
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function subscribeToThemeUpdates(callback: () => void) {
+  window.addEventListener(themeChangeEvent, callback);
+  window.addEventListener("storage", callback);
+
+  return () => {
+    window.removeEventListener(themeChangeEvent, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function applyThemeToHtml(selectedTheme: Theme) {
+  if (typeof document !== "undefined") {
+    document.documentElement.setAttribute("data-theme", selectedTheme);
+  }
+}
+
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  // 1. Initialize with a default to avoid the "localStorage is not defined" server error
-  const [theme, setThemeState] = useState<Theme>("light");
+  const theme = useSyncExternalStore<Theme>(
+    subscribeToThemeUpdates,
+    getPreferredTheme,
+    () => "light",
+  );
 
-  // Function to apply theme to HTML element
-  const applyThemeToHtml = useCallback((selectedTheme: Theme) => {
-    if (typeof document !== "undefined") {
-      document.documentElement.setAttribute("data-theme", selectedTheme);
-    }
-  }, []);
-
-  // 2. This effect runs ONLY on the client after the first render
   useEffect(() => {
-    const storedTheme = localStorage.getItem("theme") as Theme;
-    if (storedTheme) {
-      setThemeState(storedTheme);
-      applyThemeToHtml(storedTheme);
-    } else {
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)",
-      ).matches;
-      const initialTheme = prefersDark ? "dark" : "light";
-      setThemeState(initialTheme);
-      applyThemeToHtml(initialTheme);
-    }
-  }, [applyThemeToHtml]);
+    applyThemeToHtml(theme);
+  }, [theme]);
 
-  // Update theme state and optionally persist
   const setTheme = useCallback(
     (newTheme: Theme, persist: boolean = true) => {
-      setThemeState(newTheme);
       applyThemeToHtml(newTheme);
       if (typeof window !== "undefined") {
         if (persist) {
@@ -56,13 +75,13 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
         } else {
           localStorage.removeItem("theme");
         }
+        window.dispatchEvent(new Event(themeChangeEvent));
       }
     },
-    [applyThemeToHtml],
+    [],
   );
 
   const toggleTheme = useCallback(() => {
-    const themes: Theme[] = ["light", "dark", "midnight"];
     const nextIndex = (themes.indexOf(theme) + 1) % themes.length;
     setTheme(themes[nextIndex]);
   }, [theme, setTheme]);

@@ -5,9 +5,10 @@ export const runtime = 'edge';
 
 export async function GET(
   request: Request,
-  { params }: { params: { username: string } }
+  context: { params: Promise<{ username: string; }> }
 ) {
-  const username = params.username;
+  const resolvedParams = await context.params;
+  const username = resolvedParams.username;
 
   // 1. Fetch user data for the card
   const { data: profile } = await supabase
@@ -49,6 +50,7 @@ export async function GET(
               overflow: 'hidden',
             }}
           >
+            {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse supports plain img elements, not next/image. */}
             <img
               src={profile.avatar_url || 'https://via.placeholder.com/240'}
               alt="Avatar"

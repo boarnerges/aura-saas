@@ -7,7 +7,7 @@ export default function SignInPage() {
         path="/sign-in"
         routing="path"
         signUpUrl="/sign-up"
-        afterSignInUrl="/dashboard"
+        forceRedirectUrl="/dashboard"
       />
     </main>
   );

@@ -36,9 +36,18 @@ export function useLinks(userId: string | undefined) {
       const previousLinks = queryClient.getQueryData<Link[]>(["links", userId]);
 
       // Instantly add a "fake" link to the UI
-      queryClient.setQueryData(["links", userId], (old: any) => [
+      const optimisticLink: Link = {
+        id: "temp-id",
+        created_at: new Date().toISOString(),
+        title: newLink.title ?? "New Link",
+        url: newLink.url ?? "https://",
+        user_id: newLink.user_id ?? userId ?? "",
+        icon_name: newLink.icon_name,
+      };
+
+      queryClient.setQueryData<Link[]>(["links", userId], (old = []) => [
         ...old,
-        { ...newLink, id: "temp-id", created_at: new Date().toISOString() },
+        optimisticLink,
       ]);
 
       return { previousLinks };

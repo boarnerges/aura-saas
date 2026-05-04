@@ -1,9 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useCallback } from "react";
 import { Settings, Save, AlertTriangle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import Cropper from "react-easy-crop";
+import Cropper, { type Area } from "react-easy-crop";
 import getCroppedImg from "../lib/utils";
 import { Profile } from "@/types";
 import { AnimatePresence, motion } from "framer-motion";
@@ -17,6 +17,14 @@ interface ProfileSettingsProps {
   initialBio: string;
   initialAvatarUrl: string | null;
   onUpdate: (updatedProfile: Profile) => void;
+}
+
+interface ProfileUpdates extends Partial<Profile> {
+  avatarFile?: File | Blob;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unexpected error";
 }
 
 export default function ProfileSettings({
@@ -45,10 +53,10 @@ export default function ProfileSettings({
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
   // --- HANDLERS ---
-  const onCropComplete = useCallback((_: any, croppedAreaPixels: any) => {
+  const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
@@ -65,8 +73,13 @@ export default function ProfileSettings({
   const handleCropSave = async () => {
     setLoading(true);
     try {
+      if (!imageToCrop || !croppedAreaPixels) {
+        throw new Error("Choose and crop an image before saving.");
+      }
+
       // 1. Get the cropped image blob
-      const croppedImage = await getCroppedImg(imageToCrop!, croppedAreaPixels);
+      const croppedImage = await getCroppedImg(imageToCrop, croppedAreaPixels);
+      if (!croppedImage) throw new Error("Could not crop the selected image.");
 
       // 2. Get the fresh Supabase JWT from Clerk
       const token = await getToken({ template: "supabase" });
@@ -102,18 +115,18 @@ export default function ProfileSettings({
         type: "success",
         text: "Avatar ready! Click 'Update Brand' to save.",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Upload Error Details:", err);
       setMessage({
         type: "error",
-        text: err.message || "Cropping/Upload failed.",
+        text: getErrorMessage(err) || "Cropping/Upload failed.",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdate = async (updates: any) => {
+  const handleUpdate = async (updates: ProfileUpdates) => {
     setLoading(true);
     setMessage(null);
 
@@ -182,11 +195,11 @@ export default function ProfileSettings({
       } else {
         throw new Error("Profile update returned no data.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Update Error:", err);
       setMessage({
         type: "error",
-        text: err.message || "Failed to update profile.",
+        text: getErrorMessage(err) || "Failed to update profile.",
       });
     } finally {
       setLoading(false);
@@ -195,10 +208,10 @@ export default function ProfileSettings({
 
   return (
     <>
-      <div className="bg-[var(--aura-card)] border-4 border-[var(--aura-border)] p-6 mb-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-        <div className="flex items-center gap-2 mb-6">
+      <div className="space-y-6 text-[var(--aura-text)]">
+        <div className="flex items-center gap-2">
           <Settings size={20} className="text-[var(--aura-accent)]" />
-          <h2 className="font-black italic uppercase text-lg tracking-tight text-[var(--aura-text)]">
+          <h2 className="font-black italic uppercase text-lg tracking-tight">
             Public Identity
           </h2>
         </div>
@@ -260,9 +273,11 @@ export default function ProfileSettings({
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[var(--aura-border)] flex-shrink-0 bg-[var(--aura-bg)]">
                 {avatarUrl ? (
-                  <img
+                  <Image
                     src={avatarUrl}
                     alt="Avatar"
+                    width={80}
+                    height={80}
                     className="w-full h-full object-cover"
                   />
                 ) : (

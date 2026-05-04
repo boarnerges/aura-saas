@@ -5,6 +5,7 @@ export interface Link {
   url: string;
   user_id: string;
   icon_name?: string;
+  isActive?: boolean;
 }
 
 export interface Profile {

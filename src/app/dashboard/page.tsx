@@ -162,6 +162,24 @@ export default function DashboardPage() {
     initializeDashboard();
   }, [isAuthLoaded, user, setTheme]);
 
+  useEffect(() => {
+    if (!isSettingsOpen) return undefined;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isSettingsOpen]);
+
   const updateLink = async (id: string, updates: Partial<Link>) => {
     setSaving(true);
     await supabase.from("links").update(updates).eq("id", id);
@@ -335,20 +353,61 @@ export default function DashboardPage() {
         <AnimatePresence>
           {isSettingsOpen && user && profile && (
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/35 backdrop-blur-md px-4 py-6 md:px-6"
             >
-              <ProfileSetting
-                userId={user.id}
-                initialUsername={profile.username}
-                initialDisplayName={profile.display_name || ""}
-                initialBio={profile.bio || ""}
-                initialAvatarUrl={profile.avatar_url}
-                onUpdate={(upd) => setProfile(upd as Profile)}
+              <button
+                type="button"
+                aria-label="Close settings"
+                onClick={() => setIsSettingsOpen(false)}
+                className="absolute inset-0 cursor-default"
               />
-              <div className="h-0.5 bg-[var(--aura-border)] w-full my-8 opacity-20" />
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.94, y: 26 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.94, y: 26 }}
+                transition={{ type: "spring", stiffness: 240, damping: 22 }}
+                className="relative z-10 mx-auto flex h-[calc(100vh-3rem)] w-full max-w-2xl"
+              >
+                <div className="w-full overflow-hidden rounded-3xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] shadow-[10px_10px_0px_0px_var(--aura-accent)]">
+                  <div className="flex items-center justify-between border-b-2 border-[var(--aura-border)] px-5 py-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.22em] opacity-60">
+                        Edit Profile
+                      </p>
+                      <h3 className="text-lg font-black italic uppercase tracking-tight text-[var(--aura-text)]">
+                        Public Identity
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="hidden sm:inline-flex items-center gap-2 rounded-full border border-[var(--aura-border)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] opacity-70">
+                        <CircleCheckBig size={12} />
+                        Ready
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsSettingsOpen(false)}
+                        className="rounded-xl border-2 border-[var(--aura-border)] bg-[var(--aura-bg)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition-transform active:scale-95"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                  <div className="h-full overflow-y-auto p-5 md:p-6">
+                    <ProfileSetting
+                      userId={user.id}
+                      initialUsername={profile.username}
+                      initialDisplayName={profile.display_name || ""}
+                      initialBio={profile.bio || ""}
+                      initialAvatarUrl={profile.avatar_url}
+                      onUpdate={(upd) => setProfile(upd as Profile)}
+                    />
+                  </div>
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

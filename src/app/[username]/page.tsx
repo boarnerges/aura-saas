@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import NextLink from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -13,7 +15,7 @@ import {
   Globe,
   Share2,
 } from "lucide-react";
-import { Link, Profile } from "@/types";
+import { Link as AuraLink, Profile } from "@/types";
 import * as LucideIcons from "lucide-react";
 import {
   FaTwitter,
@@ -39,10 +41,11 @@ const DynamicIcon = ({ name, size = 20 }: { name: string; size?: number }) => {
   const BrandIconComponent = brandIcons[name];
   if (BrandIconComponent) return <BrandIconComponent size={size} />;
 
-  const LucideIconComponent = LucideIcons[name as keyof typeof LucideIcons];
+  const LucideIconComponent = LucideIcons[
+    name as keyof typeof LucideIcons
+  ] as React.ElementType | undefined;
   if (!LucideIconComponent) return <Globe size={size} />;
 
-  // @ts-ignore
   return <LucideIconComponent size={size} />;
 };
 
@@ -51,7 +54,7 @@ export default function UserProfile() {
   const username = params.username as string;
   const { theme, setTheme } = useTheme();
 
-  const [links, setLinks] = useState<Link[]>([]);
+  const [links, setLinks] = useState<AuraLink[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false); // New state for 404 check
@@ -102,7 +105,7 @@ export default function UserProfile() {
         text: `Check out my link stack on Aura!`,
         url: window.location.href,
       });
-    } catch (err) {
+    } catch {
       navigator.clipboard.writeText(window.location.href);
       alert("Link copied to clipboard!");
     }
@@ -119,7 +122,7 @@ export default function UserProfile() {
     );
   }
 
-  // 🔥 THE "SUPER TIGHT" GUARD: Show this if James doesn't exist in the DB
+  // Show this when the requested handle is not in the database.
   if (notFound) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--aura-bg)] text-[var(--aura-text)] p-6 text-center">
@@ -130,15 +133,15 @@ export default function UserProfile() {
           Aura Not Found
         </h1>
         <p className="text-sm font-bold opacity-60 max-w-xs mb-8">
-          The handle <span className="text-blue-500">@{username}</span> hasn't
-          been claimed yet or doesn't exist.
+          The handle <span className="text-blue-500">@{username}</span>{" "}
+          hasn&apos;t been claimed yet or doesn&apos;t exist.
         </p>
-        <a
+        <NextLink
           href="/"
           className="px-8 py-4 bg-[var(--aura-card)] border-2 border-[var(--aura-border)] shadow-[6px_6px_0px_0px_var(--aura-border)] font-black uppercase italic text-xs hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
         >
           Create Your Aura
-        </a>
+        </NextLink>
       </div>
     );
   }
@@ -178,9 +181,11 @@ export default function UserProfile() {
           <div className="relative mb-6">
             <div className="w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-[6px] border-[var(--aura-card)] shadow-[0_20px_50px_rgba(0,0,0,0.1)] ring-2 ring-[var(--aura-border)] bg-[var(--aura-card)]">
               {profile?.avatar_url ? (
-                <img
+                <Image
                   src={profile.avatar_url}
                   alt={username}
+                  width={128}
+                  height={128}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -222,7 +227,7 @@ export default function UserProfile() {
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-4">
                     <div className="p-2 bg-[var(--aura-bg)] rounded-lg group-hover:scale-110 transition-transform">
-                      <DynamicIcon name={link.icon_name} size={22} />
+                      <DynamicIcon name={link.icon_name || "Globe"} size={22} />
                     </div>
                     <span className="text-lg font-black uppercase italic tracking-tight">
                       {link.title}
