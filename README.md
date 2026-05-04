@@ -18,3 +18,22 @@
 ## Architecture
 
 This project follows the **Feature-Sliced Design (FSD)** pattern to ensure scalability.
+
+## Deploying (Netlify)
+
+Build settings:
+
+- Build command: `npm run build`
+- Publish directory: `.next`
+
+Required environment variables:
+
+- `NEXT_PUBLIC_SITE_URL` (for example: `https://your-domain.com`)
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+- `NEXT_PUBLIC_CLERK_SIGN_IN_URL` (usually `/sign-in`)
+- `NEXT_PUBLIC_CLERK_SIGN_UP_URL` (usually `/sign-up`)
+- `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` (usually `/dashboard`)
+- `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` (usually `/dashboard`)
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`

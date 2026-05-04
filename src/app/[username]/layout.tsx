@@ -1,12 +1,14 @@
 import { Metadata } from 'next';
 
 type Props = {
-  params: { username: string }
+  params: Promise<{ username: string }>;
+  children: React.ReactNode;
 };
 
 // This function dynamically generates the "Aura Card" metadata for X/Twitter
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const username = params.username;
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
+  const resolvedParams = await params;
+  const username = resolvedParams.username;
   
   if (!username) {
     return {
@@ -16,9 +18,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   // We point to our new API route
-  const ogImage = `${
-    process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"
-  }/api/og/${username}`;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+  const ogImage = `${baseUrl}/api/og/${username}`;
 
   return {
     title: `${username} | Aura`,
