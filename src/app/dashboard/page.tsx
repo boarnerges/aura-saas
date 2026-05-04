@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useUser, UserButton } from "@clerk/nextjs";
 import { supabase } from "@/lib/supabase";
 import * as LucideIcons from "lucide-react";
@@ -14,9 +14,20 @@ import {
   FaTiktok,
 } from "react-icons/fa";
 import { useTheme, Theme } from "@/contexts/ThemeContext";
-import { Sun, Moon, Palette, Loader2, Plus, Trash2, Globe } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  Palette,
+  Loader2,
+  Plus,
+  Trash2,
+  Globe,
+  TrendingUp,
+  Link2,
+  Activity,
+  CircleCheckBig,
+} from "lucide-react";
 import { Link, Profile } from "@/types";
-import debounce from "lodash/debounce";
 import ProfileSetting from "@/components/ProfileSetting";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -32,6 +43,10 @@ const brandIcons: { [key: string]: React.ElementType } = {
   Tiktok: FaTiktok,
 };
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unexpected error";
+}
+
 const DynamicIcon = ({
   iconName,
   size,
@@ -45,7 +60,9 @@ const DynamicIcon = ({
   if (BrandIconComponent) {
     return <BrandIconComponent size={size} className={className} />;
   }
-  const LucideIconComponent = LucideIcons[iconName as keyof typeof LucideIcons];
+  const LucideIconComponent = LucideIcons[
+    iconName as keyof typeof LucideIcons
+  ] as React.ElementType | undefined;
   if (!LucideIconComponent) {
     return <Globe size={size} className={className} />;
   }
@@ -63,20 +80,26 @@ export default function DashboardPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const updateProfileTheme = useCallback(
-    debounce(async (newTheme: string) => {
-      if (!user) return;
-      try {
-        await supabase
-          .from("profiles")
-          .update({ theme: newTheme })
-          .eq("clerk_id", user.id);
-      } catch (err: any) {
-        console.error("Theme Update Failed:", err.message);
-      }
-    }, 500),
-    [user],
-  );
+  const liveLinksCount = links.filter((l) => l.url && l.url !== "https://").length;
+  const topPlatforms = links
+    .map((l) => l.icon_name || "Globe")
+    .reduce<Record<string, number>>((acc, icon) => {
+      acc[icon] = (acc[icon] || 0) + 1;
+      return acc;
+    }, {});
+  const dominantPlatform = Object.entries(topPlatforms).sort((a, b) => b[1] - a[1])[0]?.[0] || "General";
+
+  const updateProfileTheme = async (newTheme: string) => {
+    if (!user) return;
+    try {
+      await supabase
+        .from("profiles")
+        .update({ theme: newTheme })
+        .eq("clerk_id", user.id);
+    } catch (err: unknown) {
+      console.error("Theme Update Failed:", getErrorMessage(err));
+    }
+  };
 
   const handleThemeToggle = () => {
     const newTheme =
@@ -130,8 +153,8 @@ export default function DashboardPage() {
           .order("created_at", { ascending: true });
 
         setLinks(linksData || []);
-      } catch (err: any) {
-        setErrorMsg(err.message);
+      } catch (err: unknown) {
+        setErrorMsg(getErrorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -139,20 +162,17 @@ export default function DashboardPage() {
     initializeDashboard();
   }, [isAuthLoaded, user, setTheme]);
 
-  const debouncedUpdate = useCallback(
-    debounce(async (id: string, updates: Partial<Link>) => {
-      setSaving(true);
-      await supabase.from("links").update(updates).eq("id", id);
-      setSaving(false);
-    }, 500),
-    [],
-  );
+  const updateLink = async (id: string, updates: Partial<Link>) => {
+    setSaving(true);
+    await supabase.from("links").update(updates).eq("id", id);
+    setSaving(false);
+  };
 
   const handleUpdate = (id: string, updates: Partial<Link>) => {
     setLinks((prev) =>
       prev.map((l) => (l.id === id ? { ...l, ...updates } : l)),
     );
-    debouncedUpdate(id, updates);
+    updateLink(id, updates);
   };
 
   const addLink = async () => {
@@ -230,31 +250,37 @@ export default function DashboardPage() {
               {theme === "dark" && <Moon size={18} />}
               {theme === "midnight" && <Palette size={18} />}
             </button>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </div>
         </div>
       </nav>
 
-      <main className="max-w-2xl mx-auto p-4 md:p-6">
+      <main className="max-w-2xl mx-auto p-4 md:p-6 space-y-7">
+        {errorMsg && (
+          <div className="mb-6 border-2 border-red-500 bg-red-500/10 p-4 text-sm font-bold text-red-500">
+            {errorMsg}
+          </div>
+        )}
+
         {/* WELCOME BOX */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[var(--aura-card)] text-[var(--aura-text)] p-6 md:p-8 border-4 border-[var(--aura-border)] mb-8 shadow-[8px_8px_0px_0px_rgba(59,130,246,1)]"
+          className="bg-[var(--aura-card)] text-[var(--aura-text)] p-6 md:p-7 border-2 border-[var(--aura-border)] shadow-[4px_4px_0px_0px_var(--aura-accent)] rounded-2xl"
         >
           <div className="flex flex-col md:flex-row justify-between items-start gap-6">
             <div className="space-y-1">
-              <h2 className="text-2xl md:text-4xl font-black italic uppercase leading-none tracking-tight">
+              <h2 className="text-2xl md:text-3xl font-black italic uppercase leading-[0.95] tracking-tight">
                 Hey, <br className="md:hidden" />{" "}
                 {profile?.display_name || "Soj"}!
               </h2>
-              <p className="text-[var(--aura-accent)] font-bold text-[10px] md:text-xs tracking-widest uppercase opacity-80">
+              <p className="text-[var(--aura-accent)] font-bold text-[10px] md:text-[11px] tracking-[0.2em] uppercase opacity-80">
                 Aura Status: Online & Building ⚡
               </p>
             </div>
             <button
               onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-              className={`w-full md:w-auto text-[10px] font-black uppercase px-6 py-3 border-2 transition-all active:scale-95 ${
+              className={`w-full md:w-auto text-[10px] font-black uppercase tracking-[0.18em] px-5 py-2.5 border-2 rounded-xl transition-all active:scale-95 ${
                 isSettingsOpen
                   ? "bg-red-500 text-white border-red-700"
                   : "bg-[var(--aura-text)] text-[var(--aura-bg)] border-[var(--aura-text)]"
@@ -265,6 +291,46 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        >
+          <div className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-4 shadow-[3px_3px_0px_0px_var(--aura-border)]">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">
+                Active Links
+              </p>
+              <Link2 size={14} className="opacity-60" />
+            </div>
+            <p className="text-[2rem] font-black leading-none">{liveLinksCount}</p>
+            <p className="text-xs mt-2 opacity-60">Links ready on your public profile</p>
+          </div>
+          <div className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-4 shadow-[3px_3px_0px_0px_var(--aura-border)]">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">
+                Dominant Platform
+              </p>
+              <TrendingUp size={14} className="opacity-60" />
+            </div>
+            <p className="text-2xl font-black leading-none">{dominantPlatform}</p>
+            <p className="text-xs mt-2 opacity-60">Most-used icon in your stack</p>
+          </div>
+          <div className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-4 shadow-[3px_3px_0px_0px_var(--aura-border)]">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">
+                Profile Status
+              </p>
+              <CircleCheckBig size={14} className="opacity-60" />
+            </div>
+            <p className="text-2xl font-black leading-none">
+              {profile?.bio ? "Optimized" : "Needs Bio"}
+            </p>
+            <p className="text-xs mt-2 opacity-60">Add a bio to improve credibility</p>
+          </div>
+        </motion.section>
+
         {/* SETTINGS DRAWER */}
         <AnimatePresence>
           {isSettingsOpen && user && profile && (
@@ -272,7 +338,7 @@ export default function DashboardPage() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden mb-10"
+              className="overflow-hidden"
             >
               <ProfileSetting
                 userId={user.id}
@@ -287,9 +353,9 @@ export default function DashboardPage() {
           )}
         </AnimatePresence>
 
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3">
           <div className="h-3 w-3 bg-blue-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(37,99,235,0.5)]" />
-          <h3 className="font-black uppercase text-[10px] md:text-xs tracking-[0.3em] text-[var(--aura-text)]">
+          <h3 className="font-black uppercase text-[10px] md:text-[11px] tracking-[0.24em] text-[var(--aura-text)]">
             Live Link Stack
           </h3>
         </div>
@@ -320,7 +386,7 @@ export default function DashboardPage() {
                     transition: { duration: 0.2 },
                   }}
                   whileHover={{ y: -2 }}
-                  className="bg-[var(--aura-card)] border-2 border-[var(--aura-border)] p-4 md:p-6 rounded-2xl shadow-[4px_4px_0px_0px_var(--aura-border)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                  className="bg-[var(--aura-card)] border-2 border-[var(--aura-border)] p-4 md:p-5 rounded-2xl shadow-[3px_3px_0px_0px_var(--aura-border)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
                 >
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-3">
@@ -347,7 +413,7 @@ export default function DashboardPage() {
                         onChange={(e) =>
                           handleUpdate(link.id, { title: e.target.value })
                         }
-                        className="w-full font-black text-base md:text-xl outline-none bg-transparent text-[var(--aura-text)] focus:text-blue-500 transition-colors"
+                        className="w-full font-black text-base md:text-lg outline-none bg-transparent text-[var(--aura-text)] focus:text-blue-500 transition-colors"
                         placeholder="Title"
                       />
                     </div>
@@ -382,15 +448,34 @@ export default function DashboardPage() {
           </AnimatePresence>
         </div>
 
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-5 shadow-[3px_3px_0px_0px_var(--aura-border)]"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Activity size={15} className="text-[var(--aura-accent)]" />
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">
+              Recent Activity
+            </h4>
+          </div>
+          <ul className="space-y-3">
+            <li className="text-sm opacity-80">Updated dashboard theme to <span className="font-bold">{theme}</span>.</li>
+            <li className="text-sm opacity-80">Managing <span className="font-bold">{links.length}</span> total links.</li>
+            <li className="text-sm opacity-80">Latest profile slug: <span className="font-bold">@{profile?.username || "pending"}</span>.</li>
+          </ul>
+        </motion.section>
+
         {/* FLOATING ACTION BUTTON */}
         <div className="fixed bottom-8 left-0 right-0 px-6 flex justify-center pointer-events-none z-40">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={addLink}
-            className="pointer-events-auto w-full max-w-md bg-[var(--aura-text)] text-[var(--aura-bg)] py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-3 shadow-[0_10px_20px_rgba(0,0,0,0.2),8px_8px_0px_0px_var(--aura-accent)]"
+            className="pointer-events-auto w-full max-w-sm bg-[var(--aura-text)] text-[var(--aura-bg)] py-3.5 rounded-xl font-black uppercase italic text-sm flex justify-center items-center gap-2 shadow-[0_10px_20px_rgba(0,0,0,0.2),6px_6px_0px_0px_var(--aura-accent)]"
           >
-            <Plus size={22} strokeWidth={3} /> Add New Link
+            <Plus size={18} strokeWidth={3} /> Add New Link
           </motion.button>
         </div>
       </main>
