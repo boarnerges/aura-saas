@@ -224,15 +224,15 @@ export default function ProfileSettings({
             <label className="block text-[10px] font-black uppercase mb-1 text-[var(--aura-text)]">
               Your Aura URL
             </label>
-            <div className="flex items-center border-2 border-[var(--aura-border)] p-3 bg-[var(--aura-bg)] focus-within:border-[var(--aura-accent)] transition-colors">
-              <span className="text-[var(--aura-text)] font-bold mr-1">
+            <div className="flex items-center gap-1 border-2 border-[var(--aura-border)] p-3 bg-[var(--aura-bg)] focus-within:border-[var(--aura-accent)] transition-colors">
+              <span className="shrink-0 whitespace-nowrap text-[var(--aura-text)] font-bold">
                 {siteHost}/
               </span>
               <input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="username"
-                className="bg-transparent outline-none font-bold w-full text-[var(--aura-text)]"
+                className="min-w-0 flex-1 bg-transparent outline-none font-bold text-[var(--aura-text)]"
               />
             </div>
           </div>
