@@ -36,6 +36,8 @@ export default function ProfileSettings({
   onUpdate,
 }: ProfileSettingsProps) {
   const { getToken } = useAuth(); // Get the token getter from Clerk
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const siteHost = siteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
   // --- STATE ---
   const [username, setUsername] = useState(initialUsername);
@@ -224,7 +226,7 @@ export default function ProfileSettings({
             </label>
             <div className="flex items-center border-2 border-[var(--aura-border)] p-3 bg-[var(--aura-bg)] focus-within:border-[var(--aura-accent)] transition-colors">
               <span className="text-[var(--aura-text)] font-bold mr-1">
-                aura.link/
+                {siteHost}/
               </span>
               <input
                 value={username}
