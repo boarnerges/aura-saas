@@ -26,6 +26,8 @@ import {
   Link2,
   Activity,
   CircleCheckBig,
+  Eye,
+  ExternalLink,
 } from "lucide-react";
 import { Link, Profile } from "@/types";
 import ProfileSetting from "@/components/ProfileSetting";
@@ -88,6 +90,9 @@ export default function DashboardPage() {
       return acc;
     }, {});
   const dominantPlatform = Object.entries(topPlatforms).sort((a, b) => b[1] - a[1])[0]?.[0] || "General";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const publicProfileUrl = `${siteUrl.replace(/\/$/, "")}/${profile?.username || ""}`;
+  const previewLinks = links.filter((l) => l.url && l.url !== "https://").slice(0, 3);
 
   const updateProfileTheme = async (newTheme: string) => {
     if (!user) return;
@@ -273,7 +278,7 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      <main className="max-w-2xl mx-auto p-4 md:p-6 space-y-7">
+      <main className="max-w-6xl mx-auto p-4 md:p-6 space-y-7">
         {errorMsg && (
           <div className="mb-6 border-2 border-red-500 bg-red-500/10 p-4 text-sm font-bold text-red-500">
             {errorMsg}
@@ -309,45 +314,237 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        <motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
-        >
-          <div className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-4 shadow-[3px_3px_0px_0px_var(--aura-border)]">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">
-                Active Links
-              </p>
-              <Link2 size={14} className="opacity-60" />
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+          <section className="xl:col-span-8 space-y-7">
+            <motion.section
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+            >
+              <div className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-4 shadow-[3px_3px_0px_0px_var(--aura-border)]">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">
+                    Active Links
+                  </p>
+                  <Link2 size={14} className="opacity-60" />
+                </div>
+                <p className="text-[2rem] font-black leading-none">{liveLinksCount}</p>
+                <p className="text-xs mt-2 opacity-60">Links ready on your public profile</p>
+              </div>
+              <div className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-4 shadow-[3px_3px_0px_0px_var(--aura-border)]">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">
+                    Dominant Platform
+                  </p>
+                  <TrendingUp size={14} className="opacity-60" />
+                </div>
+                <p className="text-2xl font-black leading-none">{dominantPlatform}</p>
+                <p className="text-xs mt-2 opacity-60">Most-used icon in your stack</p>
+              </div>
+              <div className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-4 shadow-[3px_3px_0px_0px_var(--aura-border)]">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">
+                    Profile Status
+                  </p>
+                  <CircleCheckBig size={14} className="opacity-60" />
+                </div>
+                <p className="text-2xl font-black leading-none">
+                  {profile?.bio ? "Optimized" : "Needs Bio"}
+                </p>
+                <p className="text-xs mt-2 opacity-60">Add a bio to improve credibility</p>
+              </div>
+            </motion.section>
+
+            <div className="flex items-center gap-3">
+              <div className="h-3 w-3 bg-blue-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(37,99,235,0.5)]" />
+              <h3 className="font-black uppercase text-[10px] md:text-[11px] tracking-[0.24em] text-[var(--aura-text)]">
+                Live Link Stack
+              </h3>
             </div>
-            <p className="text-[2rem] font-black leading-none">{liveLinksCount}</p>
-            <p className="text-xs mt-2 opacity-60">Links ready on your public profile</p>
-          </div>
-          <div className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-4 shadow-[3px_3px_0px_0px_var(--aura-border)]">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">
-                Dominant Platform
-              </p>
-              <TrendingUp size={14} className="opacity-60" />
+
+            {/* LINK LIST */}
+            <div className="space-y-4">
+              <AnimatePresence mode="popLayout">
+                {links.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center py-16 border-4 border-dashed border-[var(--aura-border)] rounded-3xl opacity-40"
+                  >
+                    <p className="font-bold uppercase tracking-widest text-sm">
+                      Empty Stack
+                    </p>
+                  </motion.div>
+                ) : (
+                  links.map((link) => (
+                    <motion.div
+                      key={link.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{
+                        opacity: 0,
+                        scale: 0.95,
+                        transition: { duration: 0.2 },
+                      }}
+                      whileHover={{ y: -2 }}
+                      className="bg-[var(--aura-card)] border-2 border-[var(--aura-border)] p-4 md:p-5 rounded-2xl shadow-[3px_3px_0px_0px_var(--aura-border)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                    >
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                          <select
+                            value={link.icon_name || "Globe"}
+                            onChange={(e) =>
+                              handleUpdate(link.id, { icon_name: e.target.value })
+                            }
+                            className="bg-(--aura-bg) border-2 border-(--aura-border) p-2 text-[10px] font-black rounded-lg uppercase text-(--aura-text) outline-none focus:ring-2 ring-blue-500"
+                          >
+                            <option value="Globe">General</option>
+                            <option value="Twitter">Twitter/X</option>
+                            <option value="Github">GitHub</option>
+                            <option value="Youtube">YouTube</option>
+                            <option value="Linkedin">LinkedIn</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="Facebook">Facebook</option>
+                            <option value="Twitch">Twitch</option>
+                            <option value="ExternalLink">Portfolio</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={link.title}
+                            onChange={(e) =>
+                              handleUpdate(link.id, { title: e.target.value })
+                            }
+                            className="w-full font-black text-base md:text-lg outline-none bg-transparent text-[var(--aura-text)] focus:text-blue-500 transition-colors"
+                            placeholder="Title"
+                          />
+                        </div>
+                        <div className="flex items-center gap-3 px-1">
+                          <DynamicIcon
+                            iconName={link.icon_name || "Globe"}
+                            size={16}
+                            className="text-blue-500"
+                          />
+                          <input
+                            type="text"
+                            value={link.url}
+                            onChange={(e) =>
+                              handleUpdate(link.id, { url: e.target.value })
+                            }
+                            className="w-full text-xs md:text-sm font-medium opacity-70 outline-none bg-transparent text-[var(--aura-text)] focus:opacity-100"
+                            placeholder="https://..."
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-4 pt-4 border-t-2 border-[var(--aura-border)] border-dashed flex justify-end">
+                        <button
+                          onClick={() => deleteLink(link.id)}
+                          className="flex items-center gap-2 text-[10px] font-black text-red-500 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-all"
+                        >
+                          <Trash2 size={12} /> REMOVE
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </AnimatePresence>
             </div>
-            <p className="text-2xl font-black leading-none">{dominantPlatform}</p>
-            <p className="text-xs mt-2 opacity-60">Most-used icon in your stack</p>
-          </div>
-          <div className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-4 shadow-[3px_3px_0px_0px_var(--aura-border)]">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">
-                Profile Status
-              </p>
-              <CircleCheckBig size={14} className="opacity-60" />
-            </div>
-            <p className="text-2xl font-black leading-none">
-              {profile?.bio ? "Optimized" : "Needs Bio"}
-            </p>
-            <p className="text-xs mt-2 opacity-60">Add a bio to improve credibility</p>
-          </div>
-        </motion.section>
+          </section>
+
+          <aside className="xl:col-span-4 space-y-6 xl:sticky xl:top-24">
+            <motion.section
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12 }}
+              className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-5 shadow-[3px_3px_0px_0px_var(--aura-border)]"
+            >
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <Eye size={15} className="text-[var(--aura-accent)]" />
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">
+                    Live Public Preview
+                  </h4>
+                </div>
+                <a
+                  href={publicProfileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border-2 border-[var(--aura-border)] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] hover:bg-[var(--aura-bg)] transition-colors"
+                >
+                  Open
+                  <ExternalLink size={11} />
+                </a>
+              </div>
+              <div className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-bg)] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">
+                  {publicProfileUrl}
+                </p>
+                <div className="mt-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full border-2 border-[var(--aura-border)] bg-[var(--aura-card)] overflow-hidden flex items-center justify-center text-sm font-black">
+                    {profile?.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={profile.avatar_url}
+                        alt={profile?.display_name || profile?.username || "Profile"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      (profile?.username || "A").charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-black text-sm">{profile?.display_name || "Your Name"}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] opacity-60">
+                      @{profile?.username || "username"}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {previewLinks.length > 0 ? (
+                    previewLinks.map((link) => (
+                      <div
+                        key={link.id}
+                        className="flex items-center justify-between rounded-xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] px-3 py-2"
+                      >
+                        <div className="flex items-center gap-2">
+                          <DynamicIcon
+                            iconName={link.icon_name || "Globe"}
+                            size={14}
+                            className="text-blue-500"
+                          />
+                          <span className="text-xs font-black">{link.title || "Untitled Link"}</span>
+                        </div>
+                        <ExternalLink size={13} className="opacity-50" />
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs opacity-60">Add links to see your live public stack preview.</p>
+                  )}
+                </div>
+              </div>
+            </motion.section>
+
+            <motion.section
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-5 shadow-[3px_3px_0px_0px_var(--aura-border)]"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Activity size={15} className="text-[var(--aura-accent)]" />
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">
+                  Recent Activity
+                </h4>
+              </div>
+              <ul className="space-y-3">
+                <li className="text-sm opacity-80">Updated dashboard theme to <span className="font-bold">{theme}</span>.</li>
+                <li className="text-sm opacity-80">Managing <span className="font-bold">{links.length}</span> total links.</li>
+                <li className="text-sm opacity-80">Latest profile slug: <span className="font-bold">@{profile?.username || "pending"}</span>.</li>
+              </ul>
+            </motion.section>
+          </aside>
+        </div>
 
         {/* SETTINGS DRAWER */}
         <AnimatePresence>
@@ -411,120 +608,6 @@ export default function DashboardPage() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        <div className="flex items-center gap-3">
-          <div className="h-3 w-3 bg-blue-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(37,99,235,0.5)]" />
-          <h3 className="font-black uppercase text-[10px] md:text-[11px] tracking-[0.24em] text-[var(--aura-text)]">
-            Live Link Stack
-          </h3>
-        </div>
-
-        {/* LINK LIST */}
-        <div className="space-y-4">
-          <AnimatePresence mode="popLayout">
-            {links.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-16 border-4 border-dashed border-[var(--aura-border)] rounded-3xl opacity-40"
-              >
-                <p className="font-bold uppercase tracking-widest text-sm">
-                  Empty Stack
-                </p>
-              </motion.div>
-            ) : (
-              links.map((link) => (
-                <motion.div
-                  key={link.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{
-                    opacity: 0,
-                    scale: 0.95,
-                    transition: { duration: 0.2 },
-                  }}
-                  whileHover={{ y: -2 }}
-                  className="bg-[var(--aura-card)] border-2 border-[var(--aura-border)] p-4 md:p-5 rounded-2xl shadow-[3px_3px_0px_0px_var(--aura-border)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
-                >
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3">
-                      <select
-                        value={link.icon_name || "Globe"}
-                        onChange={(e) =>
-                          handleUpdate(link.id, { icon_name: e.target.value })
-                        }
-                        className="bg-(--aura-bg) border-2 border-(--aura-border) p-2 text-[10px] font-black rounded-lg uppercase text-(--aura-text) outline-none focus:ring-2 ring-blue-500"
-                      >
-                        <option value="Globe">General</option>
-                        <option value="Twitter">Twitter/X</option>
-                        <option value="Github">GitHub</option>
-                        <option value="Youtube">YouTube</option>
-                        <option value="Linkedin">LinkedIn</option>
-                        <option value="Instagram">Instagram</option>
-                        <option value="Facebook">Facebook</option>
-                        <option value="Twitch">Twitch</option>
-                        <option value="ExternalLink">Portfolio</option>
-                      </select>
-                      <input
-                        type="text"
-                        value={link.title}
-                        onChange={(e) =>
-                          handleUpdate(link.id, { title: e.target.value })
-                        }
-                        className="w-full font-black text-base md:text-lg outline-none bg-transparent text-[var(--aura-text)] focus:text-blue-500 transition-colors"
-                        placeholder="Title"
-                      />
-                    </div>
-                    <div className="flex items-center gap-3 px-1">
-                      <DynamicIcon
-                        iconName={link.icon_name || "Globe"}
-                        size={16}
-                        className="text-blue-500"
-                      />
-                      <input
-                        type="text"
-                        value={link.url}
-                        onChange={(e) =>
-                          handleUpdate(link.id, { url: e.target.value })
-                        }
-                        className="w-full text-xs md:text-sm font-medium opacity-70 outline-none bg-transparent text-[var(--aura-text)] focus:opacity-100"
-                        placeholder="https://..."
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t-2 border-[var(--aura-border)] border-dashed flex justify-end">
-                    <button
-                      onClick={() => deleteLink(link.id)}
-                      className="flex items-center gap-2 text-[10px] font-black text-red-500 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-all"
-                    >
-                      <Trash2 size={12} /> REMOVE
-                    </button>
-                  </div>
-                </motion.div>
-              ))
-            )}
-          </AnimatePresence>
-        </div>
-
-        <motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="rounded-2xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] p-5 shadow-[3px_3px_0px_0px_var(--aura-border)]"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Activity size={15} className="text-[var(--aura-accent)]" />
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">
-              Recent Activity
-            </h4>
-          </div>
-          <ul className="space-y-3">
-            <li className="text-sm opacity-80">Updated dashboard theme to <span className="font-bold">{theme}</span>.</li>
-            <li className="text-sm opacity-80">Managing <span className="font-bold">{links.length}</span> total links.</li>
-            <li className="text-sm opacity-80">Latest profile slug: <span className="font-bold">@{profile?.username || "pending"}</span>.</li>
-          </ul>
-        </motion.section>
 
         {/* FLOATING ACTION BUTTON */}
         <div className="fixed bottom-8 left-0 right-0 px-6 flex justify-center pointer-events-none z-40">

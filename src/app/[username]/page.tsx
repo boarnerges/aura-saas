@@ -58,6 +58,7 @@ export default function UserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false); // New state for 404 check
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadPublicProfile() {
@@ -105,9 +106,11 @@ export default function UserProfile() {
         text: `Check out my link stack on Aura!`,
         url: window.location.href,
       });
+      setShareMessage("Shared successfully.");
     } catch {
       navigator.clipboard.writeText(window.location.href);
-      alert("Link copied to clipboard!");
+      setShareMessage("Profile URL copied.");
+      setTimeout(() => setShareMessage(null), 1800);
     }
   };
 
@@ -149,7 +152,22 @@ export default function UserProfile() {
   return (
     <div className="flex flex-col items-center min-h-screen bg-[var(--aura-bg)] text-[var(--aura-text)] selection:bg-blue-500 selection:text-white">
       {/* Action Bar */}
-      <div className="w-full max-w-2xl flex justify-end p-6 gap-2">
+      <div className="w-full max-w-2xl flex justify-between items-center p-6 gap-2">
+        <div className="flex items-center gap-2">
+          <NextLink
+            href="/"
+            className="text-[10px] font-black uppercase tracking-[0.18em] rounded-xl border-2 border-[var(--aura-border)] bg-[var(--aura-card)] px-3 py-2 shadow-[4px_4px_0px_0px_var(--aura-border)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+          >
+            Home
+          </NextLink>
+          <NextLink
+            href="/dashboard"
+            className="text-[10px] font-black uppercase tracking-[0.18em] rounded-xl border-2 border-[var(--aura-border)] bg-[var(--aura-bg)] px-3 py-2 shadow-[4px_4px_0px_0px_var(--aura-border)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+          >
+            Dashboard
+          </NextLink>
+        </div>
+        <div className="flex items-center gap-2">
         <button
           onClick={() =>
             setTheme(
@@ -173,6 +191,7 @@ export default function UserProfile() {
         >
           <Share2 size={20} />
         </button>
+        </div>
       </div>
 
       <main className="w-full max-w-[480px] px-6 pb-20">
@@ -248,10 +267,30 @@ export default function UserProfile() {
             </div>
           )}
         </div>
+        {shareMessage && (
+          <p className="mt-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-blue-500">
+            {shareMessage}
+          </p>
+        )}
       </main>
 
       <footer className="mt-auto py-12 flex flex-col items-center gap-2">
         <div className="h-px w-12 bg-[var(--aura-border)] mb-4" />
+        <div className="flex items-center gap-3">
+          <NextLink
+            href="/"
+            className="text-[10px] font-black uppercase tracking-[0.18em] opacity-60 hover:opacity-100 transition-opacity"
+          >
+            Home
+          </NextLink>
+          <span className="opacity-30">•</span>
+          <NextLink
+            href="/dashboard"
+            className="text-[10px] font-black uppercase tracking-[0.18em] opacity-60 hover:opacity-100 transition-opacity"
+          >
+            Dashboard
+          </NextLink>
+        </div>
         <p className="text-[10px] font-black tracking-[0.5em] opacity-20 uppercase">
           Project Aura
         </p>
