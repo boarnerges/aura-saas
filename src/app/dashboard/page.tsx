@@ -1,5 +1,6 @@
 "use client";
 
+import NextLink from "next/link";
 import { useState, useEffect } from "react";
 import { useUser, UserButton } from "@clerk/nextjs";
 import { supabase } from "@/lib/supabase";
@@ -260,6 +261,12 @@ export default function DashboardPage() {
             AURA <span className="hidden sm:inline">/ DASHBOARD</span>
           </h1>
           <div className="flex items-center gap-2 md:gap-4">
+            <NextLink
+              href="/"
+              className="text-[10px] font-black uppercase tracking-[0.18em] rounded-xl border-2 border-[var(--aura-border)] bg-[var(--aura-bg)] px-3 py-2 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none shadow-[3px_3px_0px_0px_var(--aura-border)] transition-all"
+            >
+              Home
+            </NextLink>
             {saving && (
               <span className="text-[10px] text-blue-500 font-bold animate-pulse">
                 SAVING...
